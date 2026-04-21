@@ -40,5 +40,7 @@ class ProfilePublic(SQLModel):
 
 class ProfilesPublic(SQLModel):
     status: str = "success"
-    count: int
+    page: int
+    limit: int
+    total: int
     data: list[Profile]

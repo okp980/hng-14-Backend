@@ -8,8 +8,9 @@ from ..model import (
     ProfilesPublic,
     Profile,
 )
-from pydantic import BaseModel, Field
-from typing import Annotated, Literal
+
+from typing import Annotated
+from ..util import FilterParams, SearchParams
 
 router = APIRouter(
     prefix="/api/profiles",
@@ -17,34 +18,18 @@ router = APIRouter(
 )
 
 
-class PaginationParams(BaseModel):
-    page: int = 1
-    limit: int = Field(default=10, ge=10, le=50)
-
-
-class FilterParams(PaginationParams):
-    gender: str | None = None
-    age_group: str | None = None
-    country_id: str | None = None
-    min_age: int | None = None
-    max_age: int | None = None
-    min_gender_probability: float | None = None
-    min_country_probability: float | None = None
-    order: Literal["asc", "desc"] = "asc"
-    sort_by: Literal["age", "created_at", "gender_probability"] = "created_at"
-
-
-class SearchParams(PaginationParams):
-    query: str
-
-
 @router.get("/", response_model=ProfilesPublic)
 async def get_profiles(
     filter_params: Annotated[FilterParams, Query()],
     session: SessionDep,
 ):
-    profiles = filter_profiles(session=session, filter_params=filter_params)
-    return ProfilesPublic(count=len(profiles), data=profiles)
+    profiles_result = filter_profiles(session=session, filter_params=filter_params)
+    return ProfilesPublic(
+        page=filter_params.page,
+        limit=filter_params.limit,
+        total=profiles_result["count"],
+        data=profiles_result["data"],
+    )
 
 
 @router.get("/search", response_model=ProfilesPublic)
