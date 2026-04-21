@@ -1,21 +1,35 @@
 from sqlmodel import SQLModel, Field
-from uuid_extensions import uuid7
+import uuid
 from datetime import datetime, timezone
+from enum import Enum
+from sqlalchemy import String
+
+
+class Gender(str, Enum):
+    male = "male"
+    female = "female"
+
+
+class AgeGroup(str, Enum):
+    child = "child"
+    teenager = "teenager"
+    adult = "adult"
+    senior = "senior"
 
 
 class ProfileBase(SQLModel):
     name: str = Field(index=True, unique=True)
-    gender: str = Field(enum=["male", "female"])
+    gender: Gender
     gender_probability: float = Field()
     age: int = Field()
-    age_group: str = Field(enum=["child", "teenager", "adult", "senior"])
-    country_id: str = Field(length=2)
-    country_name: str = Field(length=50)
+    age_group: AgeGroup
+    country_id: str = Field(sa_type=String(2))
+    country_name: str = Field(sa_type=String(50))
     country_probability: float = Field()
 
 
 class Profile(ProfileBase, table=True):
-    id: uuid7.UUID = Field(default_factory=uuid7.uuid7, primary_key=True)
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
