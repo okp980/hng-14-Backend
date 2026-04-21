@@ -1,5 +1,7 @@
-import httpx
-from pprint import pprint
+from sqlmodel import Session
+from .model import Profile
+from .routers.profiles import FilterParams
+from sqlmodel import select, col
 
 
 class CustomHTTPException(Exception):
@@ -8,58 +10,32 @@ class CustomHTTPException(Exception):
         self.message = message
 
 
-def generate_profile(name: str):
-    try:
-        genderize_response = httpx.get(
-            f"https://api.genderize.io?name={name}", timeout=10.0
+def filter_profiles(*, session: Session, filter_params: FilterParams) -> list[Profile]:
+    statement = select(Profile)
+    if filter_params.gender is not None:
+        statement = statement.where(col(Profile.gender) == filter_params.gender.lower())
+    if filter_params.country_id is not None:
+        statement = statement.where(
+            col(Profile.country_id) == filter_params.country_id.upper()
         )
-        genderize_data = genderize_response.json()
-        if genderize_data["gender"] is None or genderize_data["count"] == 0:
-            raise CustomHTTPException(
-                status_code=502, message="Genderize returned an invalid response"
-            )
-        agify_response = httpx.get(f"https://api.agify.io?name={name}", timeout=10.0)
-        agify_data = agify_response.json()
-        if agify_data["age"] is None:
-            raise CustomHTTPException(
-                status_code=502, message="Agify returned an invalid response"
-            )
-        country_response = httpx.get(
-            f"https://api.nationalize.io?name={name}",
-            timeout=10.0,
+    if filter_params.age_group is not None:
+        statement = statement.where(
+            col(Profile.age_group) == filter_params.age_group.lower()
         )
-        country_data = country_response.json()
-        if country_data["country"] is None:
-            raise CustomHTTPException(
-                status_code=502, message="Nationalize returned an invalid response"
-            )
-
-        pprint(country_data)
-        pprint(genderize_data)
-        pprint(agify_data)
-
-        country_with_highest_probability = max(
-            country_data["country"], key=lambda x: x["probability"]
+    if filter_params.min_age is not None:
+        statement = statement.where(col(Profile.age) >= filter_params.min_age)
+    if filter_params.max_age is not None:
+        statement = statement.where(col(Profile.age) <= filter_params.max_age)
+    if filter_params.min_gender_probability is not None:
+        statement = statement.where(
+            col(Profile.gender_probability) >= filter_params.min_gender_probability
         )
-
-        return {
-            "name": name,
-            "gender": genderize_data["gender"],
-            "gender_probability": genderize_data["probability"],
-            "sample_size": genderize_data["count"],
-            "age": agify_data["age"],
-            "age_group": "child"
-            if agify_data["age"] <= 12
-            else "teenager"
-            if agify_data["age"] <= 19
-            else "adult"
-            if agify_data["age"] <= 59
-            else "elderly",
-            "country_id": country_with_highest_probability["country_id"],
-            "country_probability": round(
-                country_with_highest_probability["probability"], 2
-            ),
-        }
-    except httpx.RequestError as e:
-        print.pprint(e.request.url)
-        raise CustomHTTPException(status_code=502, message="Upstream or server failure")
+    if filter_params.min_country_probability is not None:
+        statement = statement.where(
+            col(Profile.country_probability) >= filter_params.min_country_probability
+        )
+    if filter_params.order is not None:
+        statement = statement.order_by(
+            col(filter_params.sort_by) * (1 if filter_params.order == "asc" else -1)
+        )
+    return session.exec(statement).all()

@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, Field
-import uuid
+import uuid7
 from datetime import datetime, timezone
 from enum import Enum
 from sqlalchemy import String
@@ -29,7 +29,7 @@ class ProfileBase(SQLModel):
 
 
 class Profile(ProfileBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: uuid7.UUID = Field(default_factory=uuid7.create, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -38,15 +38,7 @@ class ProfilePublic(SQLModel):
     data: Profile
 
 
-class ProfilePublicMessage(ProfilePublic):
-    message: str | None = "Profile already exists"
-
-
 class ProfilesPublic(SQLModel):
     status: str = "success"
     count: int
     data: list[Profile]
-
-
-class ProfileCreate(SQLModel):
-    name: str = Field()
