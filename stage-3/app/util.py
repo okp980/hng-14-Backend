@@ -7,7 +7,7 @@ from typing import Literal
 
 class PaginationParams(BaseModel):
     page: int = 1
-    limit: int = Field(default=10, ge=10, le=50)
+    limit: int = Field(default=10, le=50)
 
 
 class FilterParams(PaginationParams):
