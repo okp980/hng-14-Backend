@@ -23,7 +23,7 @@ class FilterParams(PaginationParams):
 
 
 class SearchParams(PaginationParams):
-    query: str
+    q: str
 
 
 class CustomHTTPException(Exception):
@@ -121,7 +121,7 @@ def filter_search_profiles(*, session: Session, search_params: SearchParams) -> 
     max_age: int | None = None
     age_group: str | None = None
     country_name: str | None = None
-    word_list = search_params.query.strip().lower().split()
+    word_list = search_params.q.strip().lower().split()
     for index, word in enumerate(word_list):
         if word in male:
             gender.append("male")
@@ -148,8 +148,9 @@ def filter_search_profiles(*, session: Session, search_params: SearchParams) -> 
     statement = select(Profile)
     if len(gender) == 1:
         statement = statement.where(col(Profile.gender) == gender[0])
-    elif len(gender) > 1:
+    if len(gender) > 1:
         statement = statement.where(col(Profile.gender).in_(gender))
+
     if min_age is not None:
         statement = statement.where(col(Profile.age) >= min_age)
     if max_age is not None:
@@ -160,6 +161,13 @@ def filter_search_profiles(*, session: Session, search_params: SearchParams) -> 
         statement = statement.where(col(Profile.age_group) == age_group)
     if country_name is not None:
         statement = statement.where(col(Profile.country_name).ilike(country_name))
+
+    print("gender", gender)
+    print("min_age", min_age)
+    print("max_age", max_age)
+    print("age", age)
+    print("age_group", age_group)
+    print("country_name", country_name)
     total_count = session.exec(select(func.count()).select_from(statement)).one()
 
     statement = statement.offset((search_params.page - 1) * search_params.limit).limit(
