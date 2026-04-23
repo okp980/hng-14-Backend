@@ -35,7 +35,8 @@ async def custom_http_exception_handler(request: Request, exc: CustomHTTPExcepti
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
-        status_code=422, content={"status": "error", "message": "Invalid type"}
+        status_code=422,
+        content={"status": "error", "message": "Invalid parameter type"},
     )
 
 

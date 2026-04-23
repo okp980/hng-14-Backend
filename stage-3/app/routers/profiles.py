@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Query
 from ..dependency import SessionDep
-from sqlmodel import select, col
 import uuid
-from ..util import CustomHTTPException, filter_profiles
+from ..util import CustomHTTPException, filter_profiles, filter_search_profiles
 from ..model import (
     ProfilePublic,
     ProfilesPublic,
@@ -36,15 +35,18 @@ async def get_profiles(
 async def search_profiles(
     search_params: Annotated[SearchParams, Query()], session: SessionDep
 ):
-    statement = select(Profile).where(
-        col(Profile.name).ilike(f"%{search_params.query}%")
-    )
-    if search_params.page is not None:
-        statement = statement.offset((search_params.page - 1) * search_params.limit)
-    if search_params.limit is not None:
-        statement = statement.limit(search_params.limit)
-    profiles = session.exec(statement).all()
-    return ProfilesPublic(count=len(profiles), data=profiles)
+    try:
+        profiles_result = filter_search_profiles(
+            session=session, search_params=search_params
+        )
+        return ProfilesPublic(
+            page=search_params.page,
+            limit=search_params.limit,
+            total=profiles_result["count"],
+            data=profiles_result["data"],
+        )
+    except Exception:
+        raise CustomHTTPException(status_code=502, message="Sever error")
 
 
 @router.get("/{profile_id}", response_model=ProfilePublic)
